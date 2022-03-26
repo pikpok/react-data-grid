@@ -1,4 +1,4 @@
-import type { Key, ReactElement, ReactNode } from 'react';
+import type { Dispatch, HTMLAttributes, InputHTMLAttributes, Key, KeyboardEvent, MouseEvent, ReactElement, ReactNode, SetStateAction, SyntheticEvent } from 'react';
 
 import type { DataGridProps } from './DataGrid';
 
@@ -6,7 +6,7 @@ export type Omit<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>;
 
 export type Maybe<T> = T | undefined | null;
 
-export type StateSetter<S> = React.Dispatch<React.SetStateAction<S>>;
+export type StateSetter<S> = Dispatch<SetStateAction<S>>;
 
 export interface Column<TRow, TSummaryRow = unknown> {
   /** The name of the column. By default it will be displayed in the header cell */
@@ -140,7 +140,7 @@ export interface RenderHeaderCellProps<TRow, TSummaryRow = unknown> {
 export interface CellRendererProps<TRow, TSummaryRow>
   extends Pick<RenderRowProps<TRow, TSummaryRow>, 'row' | 'rowIdx' | 'selectCell'>,
     Omit<
-      React.HTMLAttributes<HTMLDivElement>,
+      HTMLAttributes<HTMLDivElement>,
       'style' | 'children' | 'onClick' | 'onDoubleClick' | 'onContextMenu'
     > {
   column: CalculatedColumn<TRow, TSummaryRow>;
@@ -148,21 +148,22 @@ export interface CellRendererProps<TRow, TSummaryRow>
   isCopied: boolean;
   isDraggedOver: boolean;
   isCellSelected: boolean;
-  dragHandle: ReactElement<React.HTMLAttributes<HTMLDivElement>> | undefined;
+  dragHandle: ReactElement<HTMLAttributes<HTMLDivElement>> | undefined;
   onClick: RenderRowProps<TRow, TSummaryRow>['onCellClick'];
   onDoubleClick: RenderRowProps<TRow, TSummaryRow>['onCellDoubleClick'];
   onContextMenu: RenderRowProps<TRow, TSummaryRow>['onCellContextMenu'];
   onRowChange: (column: CalculatedColumn<TRow, TSummaryRow>, newRow: TRow) => void;
+  rangeSelectionMode: boolean;
 }
 
-export type CellEvent<E extends React.SyntheticEvent<HTMLDivElement>> = E & {
+export type CellEvent<E extends SyntheticEvent<HTMLDivElement>> = E & {
   preventGridDefault: () => void;
   isGridDefaultPrevented: () => boolean;
 };
 
-export type CellMouseEvent = CellEvent<React.MouseEvent<HTMLDivElement>>;
+export type CellMouseEvent = CellEvent<MouseEvent<HTMLDivElement>>;
 
-export type CellKeyboardEvent = CellEvent<React.KeyboardEvent<HTMLDivElement>>;
+export type CellKeyboardEvent = CellEvent<KeyboardEvent<HTMLDivElement>>;
 
 export interface CellClickArgs<TRow, TSummaryRow = unknown> {
   row: TRow;
@@ -192,7 +193,7 @@ export type CellKeyDownArgs<TRow, TSummaryRow = unknown> =
   | EditCellKeyDownArgs<TRow, TSummaryRow>;
 
 export interface BaseRenderRowProps<TRow, TSummaryRow = unknown>
-  extends Omit<React.HTMLAttributes<HTMLDivElement>, 'style' | 'children'>,
+  extends Omit<HTMLAttributes<HTMLDivElement>, 'style' | 'children'>,
     Pick<
       DataGridProps<TRow, TSummaryRow>,
       'onCellClick' | 'onCellDoubleClick' | 'onCellContextMenu'
@@ -200,6 +201,10 @@ export interface BaseRenderRowProps<TRow, TSummaryRow = unknown>
   viewportColumns: readonly CalculatedColumn<TRow, TSummaryRow>[];
   rowIdx: number;
   selectedCellIdx: number | undefined;
+  selectedCellsRange: { startIdx: number, endIdx: number };
+  copiedCellIdx: number | undefined;
+  draggedOverCellIdx: number | undefined;
+  lastFrozenColumnIndex: number;
   isRowSelected: boolean;
   gridRowStart: number;
   height: number;
@@ -213,8 +218,12 @@ export interface RenderRowProps<TRow, TSummaryRow = unknown>
   copiedCellIdx: number | undefined;
   draggedOverCellIdx: number | undefined;
   selectedCellEditor: ReactElement<RenderEditCellProps<TRow>> | undefined;
-  selectedCellDragHandle: ReactElement<React.HTMLAttributes<HTMLDivElement>> | undefined;
+  selectedCellDragHandle: ReactElement<HTMLAttributes<HTMLDivElement>> | undefined;
+  rangeSelectionMode: boolean;
   onRowChange: (column: CalculatedColumn<TRow, TSummaryRow>, rowIdx: number, newRow: TRow) => void;
+  onCellMouseDown: Maybe<(row: TRow, column: CalculatedColumn<TRow, TSummaryRow>) => void>;
+  onCellMouseUp: Maybe<(row: TRow, column: CalculatedColumn<TRow, TSummaryRow>) => void>;
+  onCellMouseEnter: Maybe<(columnIdx: number) => void>;
   rowClass: Maybe<(row: TRow, rowIdx: number) => Maybe<string>>;
   setDraggedOverRowIdx: ((overRowIdx: number) => void) | undefined;
 }
@@ -244,6 +253,22 @@ export interface PasteEvent<TRow> {
   sourceRow: TRow;
   targetColumnKey: string;
   targetRow: TRow;
+}
+
+export interface MultiPasteEvent {
+  copiedRange: CellsRange;
+  targetRange: CellsRange
+}
+
+export interface CellsRange {
+  startRowIdx: number
+  startColumnIdx: number
+  endRowIdx: number
+  endColumnIdx: number
+}
+
+export interface MultiCopyEvent {
+  cellsRange: CellsRange
 }
 
 export interface GroupRow<TRow> {
@@ -287,7 +312,7 @@ export interface RenderSortStatusProps extends RenderSortIconProps, RenderSortPr
 
 export interface RenderCheckboxProps
   extends Pick<
-    React.InputHTMLAttributes<HTMLInputElement>,
+    InputHTMLAttributes<HTMLInputElement>,
     'aria-label' | 'aria-labelledby' | 'checked' | 'tabIndex' | 'disabled'
   > {
   onChange: (checked: boolean, shift: boolean) => void;

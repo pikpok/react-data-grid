@@ -377,6 +377,9 @@ function TreeDataGrid<R, SR, K extends Key>(
           row={row}
           groupBy={groupBy}
           toggleGroup={toggleGroupLatest}
+          copiedCellIdx={copiedCellIdx}
+          draggedOverCellIdx={draggedOverCellIdx}
+          lastFrozenColumnIndex={lastFrozenColumnIndex}
         />
       );
     }

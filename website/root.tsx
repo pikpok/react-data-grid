@@ -27,6 +27,7 @@ import ScrollToCell from './demos/ScrollToCell';
 import TreeView from './demos/TreeView';
 import VariableRowHeight from './demos/VariableRowHeight';
 import Nav from './Nav';
+import RangeSelection from "./demos/RangeSelection";
 
 const mainClassname = css`
   display: flex;
@@ -69,6 +70,7 @@ function Root() {
           <Route path="variable-row-height" element={<VariableRowHeight direction={direction} />} />
           <Route path="animation" element={<Animation direction={direction} />} />
           <Route path="*" element="Nothing to see here" />
+          <Route path="range-selection" element={<RangeSelection direction={direction} />} />
         </Routes>
       </main>
     </Router>
