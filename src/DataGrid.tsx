@@ -568,7 +568,8 @@ function DataGrid<R, SR, K extends Key>(
     if (
       selectedCellIsWithinViewportBounds &&
       (onPaste != null || onCopy != null || onMultiCopy != null || onMultiPaste != null) &&
-      isCtrlKeyHeldDown(event)
+      isCtrlKeyHeldDown(event) &&
+      selectedPosition.mode === 'SELECT'
     ) {
       // event.key may differ by keyboard input language, so we use event.keyCode instead
       // event.nativeEvent.code cannot be used either as it would break copy/paste for the DVORAK layout
