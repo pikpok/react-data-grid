@@ -1,4 +1,4 @@
-import type { Key, ReactElement, ReactNode } from 'react';
+import type { Key, MouseEvent, ReactElement, ReactNode } from 'react';
 
 import type { DataGridProps } from './DataGrid';
 
@@ -199,6 +199,7 @@ export interface BaseRenderRowProps<TRow, TSummaryRow = unknown>
     > {
   viewportColumns: readonly CalculatedColumn<TRow, TSummaryRow>[];
   rowIdx: number;
+  selectedCellRangeIdx: { startIdx: number; endIdx: number } | undefined;
   selectedCellIdx: number | undefined;
   isRowSelected: boolean;
   gridRowStart: number;
@@ -215,6 +216,9 @@ export interface RenderRowProps<TRow, TSummaryRow = unknown>
   selectedCellEditor: ReactElement<RenderEditCellProps<TRow>> | undefined;
   selectedCellDragHandle: ReactElement<React.HTMLAttributes<HTMLDivElement>> | undefined;
   onRowChange: (column: CalculatedColumn<TRow, TSummaryRow>, rowIdx: number, newRow: TRow) => void;
+  onCellMouseDown: Maybe<(event: MouseEvent, idx: number) => void>;
+  onCellMouseUp: Maybe<(event: MouseEvent, idx: number) => void>;
+  onCellMouseEnter: Maybe<(event: MouseEvent, idx: number) => void>;
   rowClass: Maybe<(row: TRow, rowIdx: number) => Maybe<string>>;
   setDraggedOverRowIdx: ((overRowIdx: number) => void) | undefined;
 }

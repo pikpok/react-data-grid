@@ -26,7 +26,8 @@ import {
   isSelectedCellEditable,
   renderMeasuringCells,
   scrollIntoView,
-  sign
+  sign,
+  isCellInSelectionRange as isCellInSelectionRange1D
 } from './utils';
 import type {
   CalculatedColumn,
@@ -271,6 +272,11 @@ function DataGrid<R, SR, K extends Key>(
   const [measuredColumnWidths, setMeasuredColumnWidths] = useState(
     (): ReadonlyMap<string, number> => new Map()
   );
+
+  const [selectedRange, setSelectedRange] = useState({
+    start: { idx: -1, rowIdx: -1 },
+    end: { idx: -1, rowIdx: -1 }
+  });
   const [copiedCell, setCopiedCell] = useState<{ row: R; columnKey: string } | null>(null);
   const [isDragging, setDragging] = useState(false);
   const [draggedOverRowIdx, setOverRowIdx] = useState<number | undefined>(undefined);
@@ -944,10 +950,24 @@ function DataGrid<R, SR, K extends Key>(
               : undefined,
 
           selectedCellIdx: selectedRowIdx === rowIdx ? selectedIdx : undefined,
+          selectedCellRangeIdx: isCellInSelectionRange1D(rowIdx, selectedRange.start.rowIdx, selectedRange.end.rowIdx)
+            ? { startIdx: selectedRange.start.idx, endIdx: selectedRange.end.idx }
+            : undefined,
           draggedOverCellIdx: getDraggedOverCellIdx(rowIdx),
           setDraggedOverRowIdx: isDragging ? setDraggedOverRowIdx : undefined,
           lastFrozenColumnIndex,
           onRowChange: handleFormatterRowChangeLatest,
+          onCellMouseDown(_mouseEvent,idx) {
+            setSelectedRange({ start: { rowIdx, idx }, end: { rowIdx, idx } });
+          },
+          onCellMouseUp(_mouseEvent,idx) {
+            setSelectedRange({ ...selectedRange, end: { rowIdx, idx } });
+          },
+          onCellMouseEnter(mouseEvent,idx) {
+            if(mouseEvent.buttons === 1){
+                setSelectedRange({ ...selectedRange, end: { rowIdx, idx } });
+            }
+          },
           selectCell: selectCellLatest,
           selectedCellDragHandle: getDragHandle(rowIdx),
           selectedCellEditor: getCellEditor(rowIdx)
