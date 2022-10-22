@@ -21,13 +21,13 @@ import {
   createCellEvent,
   getColSpan,
   getNextSelectedCellPosition,
+  isCellInSelectionRange1D,
   isCtrlKeyHeldDown,
   isDefaultCellInput,
   isSelectedCellEditable,
   renderMeasuringCells,
   scrollIntoView,
-  sign,
-  isCellInSelectionRange as isCellInSelectionRange1D
+  sign
 } from './utils';
 import type {
   CalculatedColumn,
@@ -950,22 +950,26 @@ function DataGrid<R, SR, K extends Key>(
               : undefined,
 
           selectedCellIdx: selectedRowIdx === rowIdx ? selectedIdx : undefined,
-          selectedCellRangeIdx: isCellInSelectionRange1D(rowIdx, selectedRange.start.rowIdx, selectedRange.end.rowIdx)
+          selectedCellRangeIdx: isCellInSelectionRange1D(
+            rowIdx,
+            selectedRange.start.rowIdx,
+            selectedRange.end.rowIdx
+          )
             ? { startIdx: selectedRange.start.idx, endIdx: selectedRange.end.idx }
             : undefined,
           draggedOverCellIdx: getDraggedOverCellIdx(rowIdx),
           setDraggedOverRowIdx: isDragging ? setDraggedOverRowIdx : undefined,
           lastFrozenColumnIndex,
           onRowChange: handleFormatterRowChangeLatest,
-          onCellMouseDown(_mouseEvent,idx) {
+          onCellMouseDown(_mouseEvent, idx) {
             setSelectedRange({ start: { rowIdx, idx }, end: { rowIdx, idx } });
           },
-          onCellMouseUp(_mouseEvent,idx) {
+          onCellMouseUp(_mouseEvent, idx) {
             setSelectedRange({ ...selectedRange, end: { rowIdx, idx } });
           },
-          onCellMouseEnter(mouseEvent,idx) {
-            if(mouseEvent.buttons === 1){
-                setSelectedRange({ ...selectedRange, end: { rowIdx, idx } });
+          onCellMouseEnter(mouseEvent, idx) {
+            if (mouseEvent.buttons === 1) {
+              setSelectedRange({ ...selectedRange, end: { rowIdx, idx } });
             }
           },
           selectCell: selectCellLatest,

@@ -2,7 +2,7 @@ import { forwardRef, memo, type RefAttributes } from 'react';
 import clsx from 'clsx';
 
 import { RowSelectionProvider, useLatestFunc } from './hooks';
-import { getColSpan, getRowStyle, isCellInSelectionRange } from './utils';
+import { getColSpan, getRowStyle, isCellInSelectionRange1D } from './utils';
 import type { CalculatedColumn, RenderRowProps } from './types';
 import Cell from './Cell';
 import { rowClassname, rowSelectedClassname } from './style/row';
@@ -68,7 +68,7 @@ function Row<R, SR>(
     }
 
     const isCellSelected = selectedCellRangeIdx
-      ? isCellInSelectionRange(idx, selectedCellRangeIdx.startIdx, selectedCellRangeIdx.endIdx)
+      ? isCellInSelectionRange1D(idx, selectedCellRangeIdx.startIdx, selectedCellRangeIdx.endIdx)
       : false;
 
     if (isCellSelected && selectedCellEditor) {
