@@ -8,7 +8,7 @@ import type { Column, SortColumn } from '../../src';
 import { exportToCsv, exportToPdf } from './exportUtils';
 import { textEditorClassname } from '../../src/editors/textEditor';
 import type { Props } from './types';
-import type {Direction, MultiPasteEvent} from '../../src/types';
+import type {CellsRange, Direction} from '../../src/types';
 
 const toolbarClassname = css`
   text-align: end;
@@ -336,37 +336,26 @@ export default function RangeSelection({ direction }: Props) {
     });
   }, [rows, sortColumns]);
 
+  const [selectedRanges, setSelectedRanges] = useState<CellsRange[]>([]);
 
-  function getRangeSize(start:number, end:number){
-    return Math.abs(start-end)
+  function handleSelectedRangesChange(newSelectedRanges: CellsRange[]) {
+    setSelectedRanges(newSelectedRanges)
   }
 
-  function handleMultiPaste(pasteEvent: MultiPasteEvent) {
-    const sourceRange = pasteEvent.copiedRange
-    const destinationRange = pasteEvent.targetRange
-    if(getRangeSize(sourceRange.endRowIdx,sourceRange.startRowIdx) !== getRangeSize(destinationRange.endRowIdx, destinationRange.startRowIdx) ||
-        getRangeSize(sourceRange.startColumnIdx, sourceRange.endColumnIdx) !== getRangeSize(destinationRange.startColumnIdx, destinationRange.endColumnIdx)
-    ){
-      return;
-    }
-
-    const newRows = [...rows]
-    const sourceStartRow = Math.min(sourceRange.startRowIdx, sourceRange.endRowIdx)
-    const sourceStartCol = Math.min(sourceRange.startColumnIdx, sourceRange.endColumnIdx)
-    const destinationStartRow = Math.min(destinationRange.startRowIdx, destinationRange.endRowIdx)
-    const destinationStartCol = Math.min(destinationRange.startColumnIdx, destinationRange.endColumnIdx)
-
-    // debugger
-    for (let i=0; i<= getRangeSize(sourceRange.startRowIdx, sourceRange.endRowIdx); i++){
-      for (let j=0; j <= getRangeSize(sourceRange.startColumnIdx, sourceRange.endColumnIdx); j++){
-        const sourceColumnKey = columns[sourceStartCol + j].key
-        const destinationColumnKey = columns[destinationStartCol + j].key
-        // @ts-expect-error
-        newRows[destinationStartRow + i][destinationColumnKey] = newRows[sourceStartRow + i][sourceColumnKey]
+  function updateSelectedRanges (newValue: string) {
+    const newRows = [...sortedRows];
+    selectedRanges.forEach(({endColumnIdx, endRowIdx, startColumnIdx, startRowIdx}) => {
+      for (let rowIdx = Math.min(startRowIdx, endRowIdx); rowIdx <= Math.max(startRowIdx, endRowIdx); rowIdx++) {
+        const newRow = {...newRows[rowIdx]};
+        for (let columnIdx = Math.min(startColumnIdx, endColumnIdx); columnIdx <= Math.max(startColumnIdx, endColumnIdx); columnIdx++) {
+          const column = columns[columnIdx];
+          // @ts-expect-error
+          newRow[column.key] = newValue;
+        }
+        newRows[rowIdx] = newRow;
       }
-    }
-
-    setRows(newRows)
+    })
+    setRows(newRows);
   }
 
   const gridElement = (
@@ -387,7 +376,15 @@ export default function RangeSelection({ direction }: Props) {
       className="fill-grid"
       direction={direction}
       enableRangeSelection
-      onMultiPaste = {handleMultiPaste}
+      onSelectedRangesChange={handleSelectedRangesChange}
+      onMultiPaste={() => {
+        navigator.clipboard
+          .readText()
+          .then((clipText) => {
+            updateSelectedRanges(clipText)
+          })
+          .catch();
+      }}
     />
   );
 

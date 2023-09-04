@@ -201,14 +201,14 @@ export interface BaseRenderRowProps<TRow, TSummaryRow = unknown>
   viewportColumns: readonly CalculatedColumn<TRow, TSummaryRow>[];
   rowIdx: number;
   selectedCellIdx: number | undefined;
-  selectedCellsRange: { startIdx: number, endIdx: number };
+  selectedCellsRange: CellsRange[];
   copiedCellIdx: number | undefined;
   draggedOverCellIdx: number | undefined;
   lastFrozenColumnIndex: number;
   isRowSelected: boolean;
   gridRowStart: number;
   height: number;
-  selectCell: (position: Position, enableEditor?: Maybe<boolean>) => void;
+  selectCell: (position: Position, enableEditor?: Maybe<boolean>, ctrlKey?: boolean) => void;
 }
 
 export interface RenderRowProps<TRow, TSummaryRow = unknown>
@@ -256,8 +256,8 @@ export interface PasteEvent<TRow> {
 }
 
 export interface MultiPasteEvent {
-  copiedRange: CellsRange;
-  targetRange: CellsRange
+  copiedRanges: CellsRange[];
+  targetRanges: CellsRange[]
 }
 
 export interface CellsRange {
@@ -268,7 +268,7 @@ export interface CellsRange {
 }
 
 export interface MultiCopyEvent {
-  cellsRange: CellsRange
+  cellRanges: CellsRange[]
 }
 
 export interface GroupRow<TRow> {

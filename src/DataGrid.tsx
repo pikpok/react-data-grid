@@ -1,4 +1,4 @@
-import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import type { Key, KeyboardEvent, RefAttributes } from 'react';
 import { flushSync } from 'react-dom';
 import clsx from 'clsx';
@@ -72,7 +72,6 @@ import {
 } from './style/core';
 import { rowSelected, rowSelectedWithFrozenCell } from './style/row';
 import SummaryRow from './SummaryRow';
-import {isValueInBetween} from "./utils/Helpers";
 
 export interface SelectCellState extends Position {
   readonly mode: 'SELECT';
@@ -88,13 +87,6 @@ type DefaultColumnOptions<R, SR> = Pick<
   Column<R, SR>,
   'renderCell' | 'width' | 'minWidth' | 'maxWidth' | 'resizable' | 'sortable'
 >;
-
-const initialSelectedRange: CellsRange = {
-  startRowIdx: -1,
-  startColumnIdx: -1,
-  endRowIdx: -1,
-  endColumnIdx: -1,
-};
 
 export interface DataGridHandle {
   element: HTMLDivElement | null;
@@ -168,8 +160,7 @@ export interface DataGridProps<R, SR = unknown, K extends Key = Key> extends Sha
   onPaste?: Maybe<(event: PasteEvent<R>) => R>;
   onMultiPaste?: Maybe<(event: MultiPasteEvent) => void>;
   onMultiCopy?: Maybe<(event: MultiCopyEvent) => void>;
-  onMultiCopySuccess?: Maybe<(copiedText: string) => void>;
-  onMultiCopyFail?: Maybe<(copiedText: string) => void>;
+  onSelectedRangesChange?: Maybe<(selectedRanges: CellsRange[]) => void>
 
   /**
    * Event props
@@ -245,6 +236,7 @@ function DataGrid<R, SR, K extends Key>(
     onPaste,
     onMultiPaste,
     onMultiCopy,
+    onSelectedRangesChange,
 
     // Toggles and modes
     enableVirtualization: rawEnableVirtualization,
@@ -332,8 +324,8 @@ function DataGrid<R, SR, K extends Key>(
     (): SelectCellState | EditCellState<R> => ({ idx: -1, rowIdx: minRowIdx - 1, mode: 'SELECT' })
   );
 
-  const [selectedRange, setSelectedRange] = useState<CellsRange>(initialSelectedRange);
-  const [copiedRange, setCopiedRange] = useState<CellsRange | null>(null);
+  const [selectedRanges, setSelectedRanges] = useState<CellsRange[]>([]);
+  const [copiedRanges, setCopiedRanges] = useState<CellsRange[]>([]);
   const [isMouseRangeSelectionMode, setIsMouseRangeSelectionMode] = useState<boolean>(false);
 
   /**
@@ -486,6 +478,10 @@ function DataGrid<R, SR, K extends Key>(
     selectCell
   }));
 
+  useEffect(() => {
+    onSelectedRangesChange?.(selectedRanges)
+  }, [selectedRanges, onSelectedRangesChange])
+
   /**
    * callbacks
    */
@@ -603,29 +599,31 @@ function DataGrid<R, SR, K extends Key>(
     // }
 
     if (enableRangeSelection) {
-      event.preventDefault()
+      event.preventDefault();
     }
 
-    if(event.shiftKey){
+    if(event.shiftKey && selectedRanges.length > 0){
+      const lastRange = selectedRanges[selectedRanges.length - 1];
+      const others = selectedRanges.slice(0, -1);
       switch (event.key) {
         case 'ArrowUp':
-          if (selectedRange.endRowIdx > 0) {
-            setSelectedRange({...selectedRange, endRowIdx: selectedRange.endRowIdx - 1})
+          if (lastRange.endRowIdx > 0) {
+            setSelectedRanges([...others, {...lastRange, endRowIdx: lastRange.endRowIdx - 1}])
           }
           break;
         case 'ArrowDown':
-          if (selectedRange.endRowIdx < rows.length - 1) {
-            setSelectedRange({...selectedRange, endRowIdx: selectedRange.endRowIdx + 1})
+          if (lastRange.endRowIdx < rows.length - 1) {
+            setSelectedRanges([...others, {...lastRange, endRowIdx: lastRange.endRowIdx + 1}])
           }
           break;
         case 'ArrowRight':
-          if (selectedRange.endColumnIdx < columns.length - 1) {
-            setSelectedRange({...selectedRange, endColumnIdx: selectedRange.endColumnIdx + 1})
+          if (lastRange.endColumnIdx < columns.length - 1) {
+            setSelectedRanges([...others, {...lastRange, endColumnIdx: lastRange.endColumnIdx + 1}])
           }
           break;
         case 'ArrowLeft':
-          if (selectedRange.endColumnIdx > 0) {
-            setSelectedRange({...selectedRange, endColumnIdx: selectedRange.endColumnIdx - 1})
+          if (lastRange.endColumnIdx > 0) {
+            setSelectedRanges([...others, {...lastRange, endColumnIdx: lastRange.endColumnIdx - 1}])
           }
           break;
         default:
@@ -682,8 +680,8 @@ function DataGrid<R, SR, K extends Key>(
 
   function handleCopy() {
     if(enableRangeSelection){
-      setCopiedRange(selectedRange)
-      onMultiCopy?.({cellsRange: selectedRange})
+      setCopiedRanges(selectedRanges)
+      onMultiCopy?.({cellRanges: selectedRanges})
     } else {
       const { idx, rowIdx } = selectedPosition;
       const sourceRow = rows[rowIdx];
@@ -695,13 +693,13 @@ function DataGrid<R, SR, K extends Key>(
 
   function handlePaste() {
     if (enableRangeSelection) {
-      if (!onMultiPaste || !onRowsChange || copiedRange === null) {
+      if (!onMultiPaste || !onRowsChange || copiedRanges === null) {
         return;
       }
 
       onMultiPaste({
-        copiedRange,
-        targetRange: selectedRange
+        copiedRanges: copiedRanges,
+        targetRanges: selectedRanges
       })
     } else {
       if (!onPaste || !onRowsChange || copiedCell === null || !isCellEditable(selectedPosition)) {
@@ -775,7 +773,7 @@ function DataGrid<R, SR, K extends Key>(
     );
   }
 
-  function selectCell(position: Position, enableEditor?: Maybe<boolean>): void {
+  function selectCell(position: Position, enableEditor?: Maybe<boolean>, ctrlKey?: boolean): void {
     if (!isCellWithinSelectionBounds(position)) return;
     commitEditorChanges();
 
@@ -788,12 +786,21 @@ function DataGrid<R, SR, K extends Key>(
     } else {
       shouldFocusCellRef.current = true;
       setSelectedPosition({ ...position, mode: 'SELECT' });
-      setSelectedRange({
-        startColumnIdx: position.idx,
-        startRowIdx: position.rowIdx,
-        endColumnIdx: position.idx,
-        endRowIdx: position.rowIdx
-      })
+      if (ctrlKey) {
+        setSelectedRanges([...selectedRanges, {
+          startColumnIdx: position.idx,
+          startRowIdx: position.rowIdx,
+          endColumnIdx: position.idx,
+          endRowIdx: position.rowIdx
+        }])
+      } else {
+        setSelectedRanges([{
+          startColumnIdx: position.idx,
+          startRowIdx: position.rowIdx,
+          endColumnIdx: position.idx,
+          endRowIdx: position.rowIdx
+        }])
+      }
     }
   }
 
@@ -1044,10 +1051,7 @@ function DataGrid<R, SR, K extends Key>(
               : undefined,
 
           selectedCellIdx: selectedRowIdx === rowIdx ? selectedIdx : undefined,
-          selectedCellsRange: enableRangeSelection && isValueInBetween(rowIdx, selectedRange?.startRowIdx, selectedRange?.endRowIdx) ? {
-            startIdx: selectedRange.startColumnIdx,
-            endIdx: selectedRange.endColumnIdx
-          } : {startIdx: -1, endIdx: -1},
+          selectedCellsRange: enableRangeSelection ? selectedRanges : [],
           rangeSelectionMode: enableRangeSelection ?? false,
           draggedOverCellIdx: getDraggedOverCellIdx(rowIdx),
           setDraggedOverRowIdx: isDragging ? setDraggedOverRowIdx : undefined,
@@ -1060,7 +1064,10 @@ function DataGrid<R, SR, K extends Key>(
           onCellMouseUp: () => setIsMouseRangeSelectionMode(false),
           onCellMouseEnter: (columnIdx: number) => {
             if (isMouseRangeSelectionMode && enableRangeSelection) {
-              setSelectedRange({...selectedRange, endRowIdx: rowIdx, endColumnIdx: columnIdx})
+              const lastRange = selectedRanges[selectedRanges.length - 1];
+              const others = selectedRanges.slice(0, -1);
+
+              setSelectedRanges([...others, {...lastRange, endRowIdx: rowIdx, endColumnIdx: columnIdx}])
             }
           },
         })
@@ -1074,7 +1081,7 @@ function DataGrid<R, SR, K extends Key>(
   if (selectedPosition.idx > maxColIdx || selectedPosition.rowIdx > maxRowIdx) {
     setSelectedPosition({ idx: -1, rowIdx: minRowIdx - 1, mode: 'SELECT' });
     setDraggedOverRowIdx(undefined);
-    setSelectedRange(initialSelectedRange)
+    setSelectedRanges([])
   }
 
   let templateRows = `repeat(${headerRowsCount}, ${headerRowHeight}px)`;

@@ -39,5 +39,6 @@ export type {
   CellMouseEvent,
   CellClickArgs,
   CellKeyDownArgs,
-  CellKeyboardEvent
+  CellKeyboardEvent,
+  CellsRange
 } from './types';

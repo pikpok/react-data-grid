@@ -55,8 +55,8 @@ function Cell<R, SR>({
   );
   const isEditable = isCellEditable(column, row);
 
-  function selectCellWrapper(openEditor?: boolean) {
-    selectCell({ rowIdx, idx: column.idx }, openEditor);
+  function selectCellWrapper(openEditor?: boolean, ctrlKey?: boolean) {
+    selectCell({ rowIdx, idx: column.idx }, openEditor, ctrlKey);
   }
 
   function handleClick(event: React.MouseEvent<HTMLDivElement>) {
@@ -93,7 +93,7 @@ function Cell<R, SR>({
   function onMouseDown(event: React.MouseEvent<HTMLDivElement>){
     if (rangeSelectionMode) {
       event.preventDefault();
-      selectCellWrapper(false);
+      selectCellWrapper(false, event.ctrlKey || event.metaKey);
     }
     return false;
   }

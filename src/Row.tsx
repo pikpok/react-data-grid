@@ -69,7 +69,7 @@ function Row<R, SR>(
       index += colSpan - 1;
     }
 
-    const isCellSelected = selectedCellIdx === idx || (rangeSelectionMode && isValueInBetween(idx, selectedCellsRange?.startIdx, selectedCellsRange?.endIdx));
+    const isCellSelected = selectedCellIdx === idx || (rangeSelectionMode && isValueInBetween(idx, rowIdx, selectedCellsRange));
 
     if (isCellSelected && selectedCellEditor) {
       cells.push(selectedCellEditor);
